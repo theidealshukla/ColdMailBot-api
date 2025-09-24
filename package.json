@@ -1,21 +1,29 @@
 {
   "name": "email-automation-api",
   "version": "1.0.0",
-  "description": "RESTful API for automated email campaigns with file upload capabilities",
+  "description": "Universal email automation backend with file uploads and SMTP support",
   "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "test": "node test_server.js"
+    "start": "node server.js"
   },
-  "keywords": ["email", "automation", "api", "express", "file-upload", "csv"],
+  "keywords": [
+    "email",
+    "automation",
+    "smtp",
+    "nodemailer",
+    "express",
+    "csv"
+  ],
   "author": "Your Name",
   "license": "MIT",
-  "type": "commonjs",
   "dependencies": {
+    "axios": "^1.12.2",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "form-data": "^4.0.4",
-    "multer": "^2.0.2"
+    "csv-parser": "^3.0.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.19.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.0"
   }
 }
