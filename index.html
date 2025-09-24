@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Email Campaign MVP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <div class="card shadow-lg p-4 rounded-4">
+    <h2 class="text-center mb-4">🤖 MailBot API - Email Campaign MVP</h2>
+    
+    <!-- API Status Indicator -->
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+      <div class="spinner-border spinner-border-sm me-2" role="status" id="statusSpinner">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <div id="apiStatus">Checking API connection...</div>
+    </div>
+
+    <!-- Step 1: Upload Files -->
+    <div id="step1">
+      <div class="mb-3">
+        <label class="form-label">Your Email</label>
+        <input type="email" id="userEmail" class="form-control" placeholder="Enter your Gmail" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Upload HR Contacts (CSV)</label>
+        <input type="file" id="contactsFile" class="form-control" accept=".csv" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Upload Resume (PDF)</label>
+        <input type="file" id="resumeFile" class="form-control" accept=".pdf" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Upload Email Config (MD file)</label>
+        <input type="file" id="configFile" class="form-control" accept=".md" required>
+      </div>
+      <button class="btn btn-primary w-100" onclick="goToStep2()">Next ➡️</button>
+    </div>
+
+    <!-- Step 2: Enter App Password -->
+    <div id="step2" class="d-none">
+      <div class="mb-3">
+        <label class="form-label">Enter 16-digit App Password</label>
+        <input type="password" id="appPassword" class="form-control" maxlength="16" placeholder="••••••••••••••••">
+      </div>
+      <button class="btn btn-success w-100" onclick="sendEmails()">Send Emails 🚀</button>
+    </div>
+
+    <!-- Step 3: Progress -->
+    <div id="progressSection" class="d-none mt-4">
+      <label class="form-label">Sending Progress</label>
+      <div class="progress">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+             role="progressbar" style="width: 0%">0%</div>
+      </div>
+      <div id="statusMsg" class="mt-3 text-center fw-bold"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let total = 0, completed = 0;
+        const API_BASE = 'http://localhost:3001';
+
+// Test API connection on page load
+window.onload = async function() {
+  try {
+    console.log('Testing API connection...');
+    const response = await fetch(`${API_BASE}/`, { 
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById('apiStatus').innerHTML = 
+        `✅ Connected to MailBot API - ${data.message || 'Backend running'}`;
+      document.getElementById('apiStatus').className = 'alert alert-success d-flex align-items-center mb-4';
+      document.getElementById('statusSpinner').style.display = 'none';
+      console.log('API Response:', data);
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('API Connection Error:', error);
+    document.getElementById('apiStatus').innerHTML = 
+      `❌ Failed to connect to API: ${error.message}`;
+    document.getElementById('apiStatus').className = 'alert alert-danger d-flex align-items-center mb-4';
+    document.getElementById('statusSpinner').style.display = 'none';
+  }
+};
+
+function goToStep2() {
+  const email = document.getElementById("userEmail").value;
+  if (!email) {
+    alert("Please enter your email");
+    return;
+  }
+  document.getElementById("step1").classList.add("d-none");
+  document.getElementById("step2").classList.remove("d-none");
+}
+
+async function sendEmails() {
+  const email = document.getElementById("userEmail").value;
+  const password = document.getElementById("appPassword").value;
+  const contactsFile = document.getElementById("contactsFile").files[0];
+  const resumeFile = document.getElementById("resumeFile").files[0];
+  const configFile = document.getElementById("configFile").files[0];
+
+  if (!password || password.length !== 16) {
+    alert("Please enter a valid 16-digit App Password");
+    return;
+  }
+
+  // Show progress section
+  document.getElementById("step2").classList.add("d-none");
+  document.getElementById("progressSection").classList.remove("d-none");
+
+  let formData = new FormData();
+  formData.append("email", email);
+  formData.append("password", password);
+  formData.append("contactsFile", contactsFile);
+  formData.append("resumeFile", resumeFile);
+  formData.append("configFile", configFile);
+
+  try {
+    // Call backend - Using deployed Vercel API
+    console.log('Sending request to:', `${API_BASE}/send-emails`);
+    let res = await fetch(`${API_BASE}/send-emails`, {
+      method: "POST",
+      body: formData
+    });
+
+    console.log('Response status:', res.status);
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    let data = await res.json();
+    console.log('Response data:', data);
+
+    // Fake progress animation
+    total = data.total || 1;
+    completed = 0;
+    let interval = setInterval(() => {
+      if (completed < total) {
+        completed++;
+        let percent = Math.round((completed / total) * 100);
+        document.getElementById("progressBar").style.width = percent + "%";
+        document.getElementById("progressBar").textContent = percent + "%";
+      } else {
+        clearInterval(interval);
+        document.getElementById("statusMsg").innerHTML = 
+          `✅ Emails sent: ${data.success}, ❌ Failed: ${data.fail}`;
+      }
+    }, 500);
+
+  } catch (err) {
+    console.error('Email sending error:', err);
+    document.getElementById("statusMsg").innerHTML = `❌ Error: ${err.message}`;
+    document.getElementById("progressBar").classList.remove("progress-bar-animated");
+    document.getElementById("progressBar").classList.add("bg-danger");
+  }
+}
+</script>
+</body>
+</html>
