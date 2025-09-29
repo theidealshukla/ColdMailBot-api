@@ -1,115 +1,78 @@
-# MailBot API
+# Backend Deployment Guide
 
-🤖 **Automated Email Campaign Service** - Send personalized job application emails with resume attachments.
+## 🚀 Manual Deployment Options
 
-## 🚀 Quick Start
+### 1. **Render.com** (Recommended - Free Tier)
 
-```bash
-# Clone and install
-git clone https://github.com/theidealshukla/ColdMailBot-api.git
-cd ColdMailBot-api
-npm install
+1. **Create Account**: Go to [render.com](https://render.com) and sign up
+2. **Connect GitHub**: Connect your GitHub account
+3. **Create Web Service**: 
+   - Choose "Web Service"
+   - Connect your repository
+   - Set **Root Directory**: `backend`
+   - **Runtime**: Python 3
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn app:app`
+4. **Deploy**: Click "Create Web Service"
+5. **Get URL**: Copy your deployed URL (e.g., `https://your-app-name.onrender.com`)
 
-# Start the server
-npm start
+### 2. **Railway** (Free Tier Available)
+
+1. **Create Account**: Go to [railway.app](https://railway.app)
+2. **New Project**: Click "New Project" → "Deploy from GitHub repo"
+3. **Select Repository**: Choose your repo
+4. **Configure**:
+   - Railway will auto-detect Python
+   - Set **Root Directory**: `backend`
+   - **Start Command**: `gunicorn app:app`
+5. **Deploy**: Railway will automatically deploy
+6. **Get URL**: Copy your railway URL
+
+## 🔧 Environment Variables
+
+Set these in your deployment platform:
+
+| Variable | Value | Required |
+|----------|-------|----------|
+| `FLASK_ENV` | `production` | ✅ |
+| `PORT` | `5000` | Auto-set by most platforms |
+| `ALLOWED_ORIGINS` | Your frontend URLs | Optional |
+
+## 🌐 Update Frontend
+
+After deployment, update your frontend's API configuration:
+
+### In `src/js/api-config.js`:
+
+```javascript
+const APIConfig = {
+    // Replace with your deployed backend URL
+    BASE_URL: 'https://your-backend-url.onrender.com',
+    
+    // Rest of the configuration...
+};
 ```
 
-Server runs on: **http://localhost:3001**
+### URLs to use:
+- **Render**: `https://your-app-name.onrender.com`
+- **Railway**: `https://your-app-name.up.railway.app`
+- **Vercel**: `https://your-app-name.vercel.app`
 
-## 📡 API Endpoints
+## ✅ Test Deployment
 
-### Root Endpoint
-```http
-GET /
-```
-Returns API welcome message and available endpoints.
+1. Visit `https://your-backend-url/health`
+2. Should return: `{"status": "healthy", "service": "Internship Email Automation API"}`
+3. Update frontend and test the complete flow
 
-### Health Check
-```http
-GET /status  
-```
-Returns backend status.
+## 🔒 Security Notes
 
-### Send Emails
-```http
-POST /send-emails
-```
-**Form Data Parameters:**
-- `email` - Your Gmail address
-- `password` - Gmail App Password  
-- `smtp_host` - SMTP server (default: smtp.gmail.com)
-- `smtp_port` - SMTP port (default: 587)
-- `configFile` - Email template config (.md file)
-- `contactsFile` - HR contacts (.csv file)
-- `resumeFile` - Your resume (any format)
+- Never commit `.env` files with real credentials
+- Use environment variables for sensitive data
+- The backend accepts CORS from GitHub Pages and major hosting platforms
+- Gmail App Passwords are processed but not stored
 
-## 📄 File Formats
+## 💡 Tips
 
-### Contacts CSV
-```csv
-name,email,company
-John Doe,john@company.com,TechCorp Inc
-Jane Smith,jane@startup.com,Innovation Labs
-```
-
-### Email Config (Markdown)
-```markdown
-**Sender Name**: Your Name
-**Delay Between Emails**: 3
-
-## Email Subject Template
-```
-Internship Application - {company}
-```
-
-## Email Body Template  
-```
-Dear {hr_name},
-
-I am interested in opportunities at {company}.
-
-Best regards,
-{sender_name}
-```
-
-## 🔧 Gmail Setup
-
-1. Enable 2-Factor Authentication
-2. Generate App Password: [Google App Passwords](https://myaccount.google.com/apppasswords)
-3. Use App Password (not regular password) in API
-
-## 🛠️ Tech Stack
-
-- **Backend:** Node.js + Express
-- **Email:** Nodemailer
-- **File Upload:** Multer
-- **CSV Parsing:** csv-parser
-
-## 📦 Deploy
-
-### Vercel
-```bash
-npm i -g vercel
-vercel
-```
-
-### Heroku
-```bash
-git push heroku main
-```
-
-## 🤝 Contributing
-
-1. Fork the repo
-2. Create feature branch: `git checkout -b feature-name`
-3. Commit: `git commit -am 'Add feature'`
-4. Push: `git push origin feature-name`  
-5. Create Pull Request
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
----
-
-⭐ **Star this repo if it helped you!**
+- **Render**: Takes ~2 minutes to deploy, auto-sleeps after 15min inactivity (free tier)
+- **Railway**: Faster deployment, $5/month after free credits
+- Both platforms support automatic deployments from GitHub
