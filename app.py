@@ -91,6 +91,29 @@ def send_email_via_gmail(sender_email, app_password, recipient_email, subject, b
         else:
             return False, f"Failed to send email: {error_msg}"
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint - API welcome message"""
+    return jsonify({
+        'message': '🤖 Email API Working!',
+        'description': 'Automated email campaign service with personalized messaging',
+        'version': '1.0.0',
+        'status': 'Backend running ✅',
+        'endpoints': {
+            'health': '/health',
+            'testConnection': '/api/test-connection',
+            'sendEmails': '/api/send-emails'
+        },
+        'github': 'https://github.com/theidealshukla/ColdMailBot-api'
+    })
+
+@app.route('/status', methods=['GET'])
+def status():
+    """Status endpoint for frontend"""
+    return jsonify({
+        'status': 'Backend running ✅'
+    })
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for deployment platforms"""

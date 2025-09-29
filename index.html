@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Email Campaign MVP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+  <div class="card shadow-lg p-4 rounded-4">
+    <h2 class="text-center mb-4">🤖 MailBot API - Email Campaign MVP</h2>
+    
+    <!-- API Status Indicator -->
+    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+      <div class="spinner-border spinner-border-sm me-2" role="status" id="statusSpinner">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <div id="apiStatus">Checking API connection...</div>
+    </div>
+
+    <!-- Email Form -->
+    <form id="emailForm" enctype="multipart/form-data">
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Gmail Email</label>
+          <input type="email" name="gmailEmail" class="form-control" placeholder="your.email@gmail.com" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Gmail App Password</label>
+          <input type="password" name="gmailPassword" class="form-control" placeholder="16-digit app password" required>
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Email Subject Template</label>
+        <input type="text" name="emailSubject" class="form-control" 
+               value="Exploring Internship Opportunities at {company}" required>
+        <small class="text-muted">Use {company}, {hr_name}, {sender_name} as placeholders</small>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Email Body Template</label>
+        <textarea name="emailBody" class="form-control" rows="8" required>Dear {hr_name},
+
+I am writing to express my interest in internship opportunities at {company}. As a Computer Science student, I have developed strong skills in web development and problem-solving through various projects.
+
+I would welcome the opportunity to discuss how my skills can contribute to your team. Thank you for considering my application.
+
+Best regards,
+{sender_name}</textarea>
+        <small class="text-muted">Use {company}, {hr_name}, {sender_name} as placeholders</small>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label class="form-label">HR Contacts (CSV)</label>
+          <input type="file" name="contacts" class="form-control" accept=".csv" required>
+          <small class="text-muted">CSV with columns: name, email, company</small>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Resume (PDF)</label>
+          <input type="file" name="resume" class="form-control" accept=".pdf" required>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary w-100">Send Emails 🚀</button>
+    </form>
+
+    <!-- Progress Section -->
+    <div id="progressSection" class="mt-4" style="display: none;">
+      <h5>📧 Sending Emails...</h5>
+      <div class="progress mb-2">
+        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+             role="progressbar" style="width: 0%">0%</div>
+      </div>
+      <div id="statusMsg">Preparing to send emails...</div>
+      
+      <!-- Results -->
+      <div id="results" class="mt-3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API_BASE = 'https://coldmailbot-api-1.onrender.com';
+
+// Test API connection on page load
+window.onload = async function() {
+  try {
+    console.log('Testing API connection...');
+    const response = await fetch(`${API_BASE}/status`, { 
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById('apiStatus').innerHTML = 
+        `✅ API Connected: Ready to send emails! - ${data.status || 'Backend running'}`;
+      document.getElementById('apiStatus').className = 'alert alert-success d-flex align-items-center mb-4';
+      document.getElementById('statusSpinner').style.display = 'none';
+      console.log('API Response:', data);
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('API Connection Error:', error);
+    document.getElementById('apiStatus').innerHTML = 
+      `❌ Failed to connect to API: ${error.message}`;
+    document.getElementById('apiStatus').className = 'alert alert-danger d-flex align-items-center mb-4';
+    document.getElementById('statusSpinner').style.display = 'none';
+  }
+};
+
+// Handle form submission
+document.getElementById('emailForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  // Show progress section
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('progressBar').style.width = '10%';
+  document.getElementById('statusMsg').textContent = 'Uploading files and connecting to Gmail...';
+  
+  try {
+    const formData = new FormData(this);
+    
+    console.log('Sending request to:', `${API_BASE}/api/send-emails`);
+    const response = await fetch(`${API_BASE}/api/send-emails`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    document.getElementById('progressBar').style.width = '50%';
+    document.getElementById('statusMsg').textContent = 'Processing email campaign...';
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorData}`);
+    }
+    
+    const data = await response.json();
+    console.log('Response:', data);
+    
+    // Update progress to complete
+    document.getElementById('progressBar').style.width = '100%';
+    document.getElementById('progressBar').textContent = '100%';
+    
+    if (data.success) {
+      document.getElementById('statusMsg').innerHTML = 
+        `🎉 Campaign Complete! ${data.message}`;
+      
+      // Show detailed results
+      let resultsHtml = '<div class="card mt-3"><div class="card-header"><h6>📊 Email Results</h6></div><div class="card-body">';
+      resultsHtml += `<p><strong>Total:</strong> ${data.summary.total} | `;
+      resultsHtml += `<strong class="text-success">Successful:</strong> ${data.summary.successful} | `;
+      resultsHtml += `<strong class="text-danger">Failed:</strong> ${data.summary.failed}</p>`;
+      
+      if (data.results && data.results.length > 0) {
+        resultsHtml += '<div class="row">';
+        data.results.forEach(result => {
+          const badgeClass = result.success ? 'bg-success' : 'bg-danger';
+          const icon = result.success ? '✅' : '❌';
+          resultsHtml += `
+            <div class="col-md-6 mb-2">
+              <div class="card">
+                <div class="card-body py-2">
+                  <small>
+                    ${icon} <strong>${result.contact}</strong> (${result.company})<br>
+                    <span class="badge ${badgeClass}">${result.message}</span>
+                  </small>
+                </div>
+              </div>
+            </div>`;
+        });
+        resultsHtml += '</div>';
+      }
+      resultsHtml += '</div></div>';
+      
+      document.getElementById('results').innerHTML = resultsHtml;
+    } else {
+      document.getElementById('statusMsg').innerHTML = `❌ Error: ${data.message}`;
+      document.getElementById('progressBar').classList.add('bg-danger');
+    }
+    
+  } catch (error) {
+    console.error('Email sending error:', error);
+    document.getElementById('statusMsg').innerHTML = `❌ Error: ${error.message}`;
+    document.getElementById('progressBar').classList.add('bg-danger');
+  }
+});
+</script>
+</body>
+</html>
