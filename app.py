@@ -12,7 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 from werkzeug.utils import secure_filename
-import pandas as pd
+import csv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
@@ -203,41 +203,56 @@ def send_emails():
         
         # Parse CSV contacts
         try:
-            df = pd.read_csv(contacts_path)
-            
-            # Map column names flexibly
-            column_mapping = {}
-            for col in df.columns:
-                col_lower = col.lower().strip()
-                if 'name' in col_lower or 'hr' in col_lower or 'contact' in col_lower:
-                    column_mapping['name'] = col
-                elif 'email' in col_lower or 'mail' in col_lower:
-                    column_mapping['email'] = col
-                elif 'company' in col_lower or 'organization' in col_lower or 'firm' in col_lower:
-                    column_mapping['company'] = col
-            
-            required_fields = ['name', 'email', 'company']
-            missing_fields = [field for field in required_fields if field not in column_mapping]
-            
-            if missing_fields:
-                return jsonify({
-                    'success': False,
-                    'message': f'Missing required columns: {missing_fields}. Found: {list(df.columns)}'
-                }), 400
-            
-            # Extract contacts
             contacts = []
-            for _, row in df.iterrows():
-                contact = {
-                    'name': clean_text(str(row[column_mapping['name']])),
-                    'email': clean_text(str(row[column_mapping['email']])),
-                    'company': clean_text(str(row[column_mapping['company']]))
-                }
+            with open(contacts_path, 'r', encoding='utf-8') as csvfile:
+                # Try to detect delimiter
+                sample = csvfile.read(1024)
+                csvfile.seek(0)
+                sniffer = csv.Sniffer()
+                delimiter = sniffer.sniff(sample).delimiter
                 
-                # Validate contact data
-                if contact['name'] and contact['email'] and contact['company']:
-                    if validate_email(contact['email']):
-                        contacts.append(contact)
+                reader = csv.DictReader(csvfile, delimiter=delimiter)
+                headers = reader.fieldnames
+                
+                if not headers:
+                    return jsonify({
+                        'success': False,
+                        'message': 'CSV file appears to be empty or invalid'
+                    }), 400
+                
+                # Map column names flexibly
+                column_mapping = {}
+                for col in headers:
+                    col_lower = col.lower().strip()
+                    if 'name' in col_lower or 'hr' in col_lower or 'contact' in col_lower:
+                        column_mapping['name'] = col
+                    elif 'email' in col_lower or 'mail' in col_lower:
+                        column_mapping['email'] = col
+                    elif 'company' in col_lower or 'organization' in col_lower or 'firm' in col_lower:
+                        column_mapping['company'] = col
+                
+                required_fields = ['name', 'email', 'company']
+                missing_fields = [field for field in required_fields if field not in column_mapping]
+                
+                if missing_fields:
+                    return jsonify({
+                        'success': False,
+                        'message': f'Missing required columns: {missing_fields}. Found: {list(headers)}'
+                    }), 400
+                
+                # Extract contacts
+                for row in reader:
+                    if row:  # Skip empty rows
+                        contact = {
+                            'name': clean_text(str(row.get(column_mapping['name'], ''))),
+                            'email': clean_text(str(row.get(column_mapping['email'], ''))),
+                            'company': clean_text(str(row.get(column_mapping['company'], '')))
+                        }
+                        
+                        # Validate contact data
+                        if contact['name'] and contact['email'] and contact['company']:
+                            if validate_email(contact['email']):
+                                contacts.append(contact)
             
             if not contacts:
                 return jsonify({
